@@ -1,1 +1,3 @@
 *.o
+.vscode/
+alert-information.txt
