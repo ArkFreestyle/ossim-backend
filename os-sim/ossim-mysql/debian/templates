@@ -1,4 +1,0 @@
-Template: ossim-mysql/database
-Type: text
-Description: OSSIM configured database to log to.
-
