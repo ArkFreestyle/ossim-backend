@@ -1,0 +1,2 @@
+#define SERVER_API_PORT 40009
+#define SERVER_VERSION "420"
