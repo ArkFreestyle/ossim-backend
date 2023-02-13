@@ -49,6 +49,8 @@
 
 #include "sim-db-insert.h"
 
+#include "stip-fileutils.h"
+
 // This defines a network endpoint, e.g. source or destination
 typedef enum
 {
@@ -574,6 +576,11 @@ sim_db_insert_alarm (SimDatabase *database,
 
   insert = sim_event_get_alarm_insert_clause (database, event, removable);
   sim_database_execute_no_query (database, insert);
+  
+  // STIP feature: Alarm forwarding
+  printf("Writing alarm to file...");
+  stip_write_to_file(insert, "alert-information.txt", O_CREAT | O_RDWR | O_APPEND);
+  
   g_free (insert);
 
   return;

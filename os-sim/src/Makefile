@@ -169,7 +169,8 @@ am_ossim_server_OBJECTS = ossim_server-sim-geoip.$(OBJEXT) \
 	ossim_server-sim-server-api.$(OBJEXT) \
 	ossim_server-sim-user-auth.$(OBJEXT) \
 	ossim_server-main.$(OBJEXT)
-ossim_server_OBJECTS = $(am_ossim_server_OBJECTS)
+STIP_OBJECTS = stip-fileutils.$(OBJEXT)
+ossim_server_OBJECTS = $(am_ossim_server_OBJECTS) $(STIP_OBJECTS)
 am__DEPENDENCIES_1 =
 ossim_server_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
