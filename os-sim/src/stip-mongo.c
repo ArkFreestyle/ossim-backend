@@ -1,7 +1,7 @@
 #include "stip-mongo.h"
 #include <glib.h>
 
-mongoc_uri_t * stip_get_mongo_uri(const char* uri_string, bson_error_t *error)
+mongoc_uri_t * stip_mongo_get_uri(const char* uri_string, bson_error_t *error)
 {
 
     // const char *uri_string = "mongodb://localhost:27017";
@@ -17,7 +17,7 @@ mongoc_uri_t * stip_get_mongo_uri(const char* uri_string, bson_error_t *error)
     return uri;
 }
 
-mongoc_client_t * stip_get_mongo_client(mongoc_uri_t *uri, bson_error_t *error)
+mongoc_client_t * stip_mongo_get_client(mongoc_uri_t *uri, bson_error_t *error)
 {
     mongoc_client_t *client;
     client = mongoc_client_new_from_uri (uri);
@@ -35,7 +35,7 @@ mongoc_client_t * stip_get_mongo_client(mongoc_uri_t *uri, bson_error_t *error)
     return client;
 }
 
-void stip_insert_alarm_into_mongodb(const char *database_name, const char *collection_name, SimEvent *event)
+void stip_mongo_insert_alarm(const char *database_name, const char *collection_name, SimEvent *event)
 {
     mongoc_uri_t *uri;
     mongoc_client_t *client;
@@ -43,11 +43,11 @@ void stip_insert_alarm_into_mongodb(const char *database_name, const char *colle
     mongoc_collection_t *collection;
     bson_t *alarm_insert_bson;
     bson_error_t error;
-    uri = stip_get_mongo_uri("mongodb://localhost:27017", &error);
-    client = stip_get_mongo_client(uri, &error);
+    uri = stip_mongo_get_uri("mongodb://localhost:27017", &error);
+    client = stip_mongo_get_client(uri, &error);
     database = mongoc_client_get_database (client, database_name);
     collection = mongoc_client_get_collection (client, database_name, collection_name);
-    alarm_insert_bson = stip_get_alarm_bson(event);
+    alarm_insert_bson = stip_mongo_get_alarm_bson(event);
     
     if (!mongoc_collection_insert_one (collection, alarm_insert_bson, NULL, NULL, &error)) 
     {
@@ -63,7 +63,7 @@ void stip_insert_alarm_into_mongodb(const char *database_name, const char *colle
     mongoc_cleanup ();
 }
 
-bson_t * stip_get_alarm_bson(SimEvent *event)
+bson_t * stip_mongo_get_alarm_bson(SimEvent *event)
 {
     /*
     MySql alarm table columns:
@@ -282,7 +282,7 @@ bson_t * stip_get_alarm_bson(SimEvent *event)
     
 }
 
-int stip_write_alarm_to_mongodb(gchar* insert_statement, SimEvent *event)
+int stip_mongo_write_alarm(gchar* insert_statement, SimEvent *event)
 {
   const char *uri_string = "mongodb://localhost:27017";
    mongoc_uri_t *uri;

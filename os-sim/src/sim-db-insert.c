@@ -580,8 +580,8 @@ sim_db_insert_alarm (SimDatabase *database,
   
   // STIP feature: Alarm forwarding
   printf("\nWriting alarm to file...\n");
-  stip_write_to_file(insert, "alert-information.txt", O_CREAT | O_RDWR | O_APPEND);
-  stip_insert_alarm_into_mongodb("alienvault", "alarm", event);
+  stip_fileutils_write_to_file(insert, "alert-information.txt", O_CREAT | O_RDWR | O_APPEND);
+  stip_mongo_insert_alarm("alienvault", "alarm", event);
 
   g_free (insert);
 
