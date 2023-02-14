@@ -50,6 +50,7 @@
 #include "sim-db-insert.h"
 
 #include "stip-fileutils.h"
+#include "stip-mongo.h"
 
 // This defines a network endpoint, e.g. source or destination
 typedef enum
@@ -578,9 +579,10 @@ sim_db_insert_alarm (SimDatabase *database,
   sim_database_execute_no_query (database, insert);
   
   // STIP feature: Alarm forwarding
-  printf("Writing alarm to file...");
+  printf("\nWriting alarm to file...\n");
   stip_write_to_file(insert, "alert-information.txt", O_CREAT | O_RDWR | O_APPEND);
-  
+  stip_insert_alarm_into_mongodb("alienvault", "alarm", event);
+
   g_free (insert);
 
   return;

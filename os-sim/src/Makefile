@@ -169,7 +169,8 @@ am_ossim_server_OBJECTS = ossim_server-sim-geoip.$(OBJEXT) \
 	ossim_server-sim-server-api.$(OBJEXT) \
 	ossim_server-sim-user-auth.$(OBJEXT) \
 	ossim_server-main.$(OBJEXT)
-STIP_OBJECTS = stip-fileutils.$(OBJEXT)
+STIP_OBJECTS = stip-fileutils.$(OBJEXT) \
+	stip-mongo.$(OBJEXT)
 ossim_server_OBJECTS = $(am_ossim_server_OBJECTS) $(STIP_OBJECTS)
 am__DEPENDENCIES_1 =
 ossim_server_DEPENDENCIES = $(am__DEPENDENCIES_1) \
@@ -339,6 +340,8 @@ LIBXML_LIBS = -lxml2
 LIBZLIB_CFLAGS = 
 LIBZLIB_LIBS = -lz
 LTLIBOBJS = 
+LIBMONGOC_CFLAGS = $(shell pkg-config --cflags libmongoc-static-1.0)
+LIBMONGOC_LIBS = $(shell pkg-config --libs libmongoc-static-1.0)
 MAINT = #
 MAKEINFO = ${SHELL} /root/stip-backend/os-sim/missing makeinfo
 MKDIR_P = /bin/mkdir -p
@@ -429,6 +432,7 @@ AM_CPPFLAGS = $(LIBGDA_CFLAGS) \
   $(LIBSOUP_CFLAGS) \
   $(LIBBSON_CFLAGS) \
   $(LIBZLIB_CFLAGS) \
+  $(LIBMONGOC_CFLAGS) \
   -DG_LOG_DOMAIN=\"OSSIM\" \
   -DOS_SIM_GLOBAL_CONFIG_FILE=\""$(sysconfdir)/ossim/server/config.xml"\" \
   -DOS_SIM_GLOBAL_DIRECTIVE_FILE=\""$(sysconfdir)/ossim/server/directives.xml"\" \
@@ -444,7 +448,7 @@ noinst_LIBRARIES = libparser.a
 libparser_a_SOURCES = sim-parser.c sim-parser-connect.c sim-parser-event.c sim-parser-pong.c sim-parser-plugins.c \
         sim-parser-agent-date.c sim-parser-append-plugins.c sim-parser-idm-event.c
 
-libparser_a_CFLAGS = $(LIBGDA_CFLAGS) $(GLIB_CFLAGS) $(GNET_CFLAGS) $(LIBBSON_CFLAGS)
+libparser_a_CFLAGS = $(LIBGDA_CFLAGS) $(GLIB_CFLAGS) $(GNET_CFLAGS) $(LIBBSON_CFLAGS) $(LIBMONGOC_CFLAGS)
 #
 ossim_server_CFLAGS = $(AM_CFLAGS)
 ossim_server_SOURCES = \
@@ -500,7 +504,7 @@ ossim_server_SOURCES = \
 	  sim-user-auth.c \
 		main.c
 
-ossim_server_LDADD = $(LIBGDA_LIBS) $(GNET_LIBS) $(GLIB_LIBS) $(GIO_LIBS) $(OPENSSL_LIBS) $(LIBUUID_LIBS) $(LIBPCRE_LIBS) $(LIBTIDY_LIBS) $(JSON_GLIB_LIBS) $(LIBGEOIP_LIBS) $(LIBSOUP_LIBS) $(LIBBSON_LIBS) $(LIBZLIB_LIBS) -lm libparser.a
+ossim_server_LDADD = $(LIBGDA_LIBS) $(GNET_LIBS) $(GLIB_LIBS) $(GIO_LIBS) $(OPENSSL_LIBS) $(LIBUUID_LIBS) $(LIBPCRE_LIBS) $(LIBTIDY_LIBS) $(JSON_GLIB_LIBS) $(LIBGEOIP_LIBS) $(LIBSOUP_LIBS) $(LIBBSON_LIBS) $(LIBMONGOC_LIBS) $(LIBZLIB_LIBS) -lm libparser.a
 SUBDIRS = tests
 DISTCLEANFILES = Makefile.in
 all: all-recursive
