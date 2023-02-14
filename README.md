@@ -49,6 +49,7 @@ Do note that `STIP_OBJECTS` is a variable we manually created. This Makefile is 
 
 
 ### Including MongoDB's C driver into our Makefile
+(*You don't have to do this. This is meant to outline how I added MongoDB into our Makefile for future reference.*)
 1. Created two variables: `LIBMONGOC_CFLAGS` and `LIBMONGOC_LIBS`
     - The former will contain the output of `pkg-config --cflags libmongoc-static-1.0`
         - -DMONGOC_STATIC -DBSON_STATIC -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
@@ -83,3 +84,31 @@ STIP stands for Security & Threat Intelligence Platform and is our fork of Alien
 - Alarm Forwarding
     - Writing alarms into a file
     - Writing alarms into a different database (trying Mongodb)
+
+## File structure and coding guidelines
+### File structure
+Any STIP related functionality must be in the appropriately named .h/.c file. We will try to keep our changes to the OSSIM codebase minimal (barring bug-fixes). Thus, all you need to do is add your new functionality into the `stip_<something>` files, and simply call your functions from the appropriate location in the OSSIM code.
+
+### Coding guidelines
+When in doubt, follow the the way things are done throughout the codebase. This will help keep things consistent and uniform.
+Function names are `<modulename>_<something>`
+- For example: for a module named `sim-correlation`, you may notice its function names are `sim_correlation_<something>`
+- We will keep this convention within our STIP files, so for a module named `stip-mongo`, the function names should be `stip_mongo_<something>`
+
+## Important changes to OSSIM files
+
+Occasionally, I expect that we'll discover a bug contained in the original OSSIM code (not written by us). This section aims to outline our fixes for those bugs so that we can keep track of which files/functions we modified, and perhaps in the future merge them with more recent versions of the OSSIM codebase (as it gets released by AT&T). Before adding anything here, it is *very very* important to first trace and confirm that the issue is not from our additions. This can be tricky, but bear in mind, it'll make things 10x trickier for the next person if you get this wrong.
+
+### sim_directive.c: sim_directive_get_node_branch_by_level()
+
+#### Behavior
+Inside the for loop which runs `up_level` times.<br>
+A **segfault** occurs at the line: `ret = ret->parent;`. The segfault occurrence is inconsistent, meaning it does not occur *every* time.
+
+#### Investigation
+In certain cases (it's not obvious exactly *when*), `up_level` can become a very large number (like up to 9-digits). This causes the for loop to continue on for that long. `ret` is a pointer to a GNode struct. GNode is basically a glib implementation of an N-ary tree. After some iterations, `ret->parent` no longer exists, `ret` gets set to `NULL`. On the next iteration `NULL->parent` raises a segmentation fault because we're trying to dereference a `NULL` pointer.
+
+#### Fix
+My best guess is that the for loop should run `g_node_depth(node)` times instead of `up_level`. However, it looks like someone specifically added an `up_level` calculation. A `level` parameter also gets passed as an argument, so I'm not confident we can change that without being sure of what is meant to be done. The quick and easy fix is to check if `ret` is `NULL`, and if so, then break out of the for loop.
+
+Note that fixes like this are akin to fixing the symptom instead of addressing the root cause. But hey, it works, for now...
