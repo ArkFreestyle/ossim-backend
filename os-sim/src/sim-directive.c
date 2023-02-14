@@ -1277,6 +1277,19 @@ sim_directive_get_node_branch_by_level (SimDirective     *directive,
   ret = node;
   for (i = 0; i < up_level; i++)
   {
+    // printf("\nret inside for loop: %p\n", ret);
+    // printf("\nret->parent: %p\n", ret->parent);
+    /*
+    BUG:
+    up_level can be a very large value, I do not know why they want to run a for loop on it.
+    My best guess would be that they want to run this for loop on g_node_depth, but then what's the above formula for calculating up_level for?
+    Anyway, this is a quick and dirty fix. If the ret variable becomes a NULL pointer, we must exit this for loop to avoid segmentation faults.
+    The segfault will occur because you will be trying to reference ret = NULL->parent below.
+    */
+    if (ret == NULL)
+    {
+      break;
+    }
     ret = ret->parent;
   }
 
