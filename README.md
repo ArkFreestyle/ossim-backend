@@ -63,7 +63,7 @@ Do note that `STIP_OBJECTS` is a variable we manually created. This Makefile is 
 ## Common issues
 This is the place to list common issues with fairly simple fixes.
 
-Issue 01: Make worked, but my ossim-server executable exits with the following!
+**Issue 01:** Make worked, but my ossim-server executable exits with the following!
 
 ```
 (ossim-server:19164): libsoup-CRITICAL **: soup_server_quit: assertion 'priv->listeners != NULL' failed
@@ -76,6 +76,27 @@ Issue 01: Make worked, but my ossim-server executable exits with the following!
 ```
 
 Solution: This happens when an ossim-server instance is already running (probably in the background). Kill it with `pgrep ossim-server && pkill -9 ossim-server` and it should run.
+
+**Issue 02:** The UI no longer loads. Error message: `operation was not completed due to a database error`.
+This can happen due to multiple issues. For me, the mysql root user's password had mysteriously been changed (it's supposed to be blank...). So running `mysql -u root` would give:
+- `ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)` (on mysql shell)
+
+Solution:
+The steps outlined in the answer by Li Yingjun, are a good starting point.
+- https://stackoverflow.com/questions/10299148/mysql-error-1045-28000-access-denied-for-user-billlocalhost-using-passw
+
+Investigate if this really is your issue by viewing the users table. If it is, follow the commands below:
+```
+service mysqld stop
+mysqld_safe --skip-grant-tables
+mysql -u root (in a new terminal)
+use mysql;
+flush privileges;
+ALTER USER 'root'@'localhost' IDENTIFIED BY '';
+flush privileges;
+quit
+service restart mysql
+```
 
 ## About STIP
 STIP stands for Security & Threat Intelligence Platform and is our fork of Alienvault (now AT&T)'s OSSIM. Our goal is to add more features in here and keep the codebase beautiful and bug-free. (Spaghetti coders, stay away).
