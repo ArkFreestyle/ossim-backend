@@ -1,3 +1,5 @@
 *.o
+*.Po
 .vscode/
 alert-information.txt
+core
