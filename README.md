@@ -46,6 +46,7 @@ Do note that `STIP_OBJECTS` is a variable we manually created. This Makefile is 
         - https://stackoverflow.com/questions/51530526/cant-find-mongoc-h
         - https://mongoc.org/libmongoc/current/installing.html
     - Again, this is not the latest version of the driver, we may be interested in upgrading this later.
+1. You already installed `libbson` when building ossim from source, so no need to redo that.
 
 
 ### Including MongoDB's C driver into our Makefile
@@ -78,16 +79,16 @@ This is the place to list common issues with fairly simple fixes.
 Solution: This happens when an ossim-server instance is already running (probably in the background). Kill it with `pgrep ossim-server && pkill -9 ossim-server` and it should run.
 
 **Issue 02:** The UI no longer loads. Error message: `operation was not completed due to a database error`.
-This can happen due to multiple issues. For me, the mysql root user's password had mysteriously been changed (it's supposed to be blank...). So running `mysql -u root` would give:
+This can happen due to multiple reasons. For me, the mysql root user's password had mysteriously been changed (it's supposed to be blank...). So running `mysql -u root` would give:
 - `ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)` (on mysql shell)
 
 Solution:
 The steps outlined in the answer by Li Yingjun, are a good starting point.
 - https://stackoverflow.com/questions/10299148/mysql-error-1045-28000-access-denied-for-user-billlocalhost-using-passw
 
-Investigate if this really is your issue by viewing the users table. If it is, follow the commands below:
+Investigate if this *really* is your issue by viewing the mysql.users table. If it is, follow the commands below:
 ```
-service mysqld stop
+service mysql stop
 mysqld_safe --skip-grant-tables
 mysql -u root (in a new terminal)
 use mysql;
