@@ -68,8 +68,8 @@ ossim_server_SOURCES = \
 		sim-log.c \
 		sim-server.c \
 		sim-timetable.c \
-	    sim-text-fields.c \
-        sim-debug.c \
+		sim-text-fields.c \
+		sim-debug.c \
 		sim-groupalarm.c \
 		sim-context.c \
 		sim-engine.c \
@@ -81,7 +81,7 @@ ossim_server_SOURCES = \
 		sim-uuid.c	\
 		sim-ssl.c \
 		sim-server-api.c \
-	    sim-user-auth.c \
+		sim-user-auth.c \
 		stip-fileutils.c \
 		stip-mongo.c \
 		main.c
