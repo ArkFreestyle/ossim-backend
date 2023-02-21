@@ -8,6 +8,7 @@ AM_CPPFLAGS =  $(LIBGDA_CFLAGS) \
   $(LIBGEOIP_CFLAGS) \
   $(LIBSOUP_CFLAGS) \
   $(LIBBSON_CFLAGS) \
+  $(LIBMONGOC_CFLAGS) \
   $(LIBZLIB_CFLAGS) \
   -DG_LOG_DOMAIN=\"OSSIM\" \
   -DOS_SIM_GLOBAL_CONFIG_FILE=\""$(sysconfdir)/ossim/server/config.xml"\" \
@@ -22,7 +23,7 @@ AM_CPPFLAGS =  $(LIBGDA_CFLAGS) \
 noinst_LIBRARIES = libparser.a
 libparser_a_SOURCES = sim-parser.c sim-parser-connect.c sim-parser-event.c sim-parser-pong.c sim-parser-plugins.c \
         sim-parser-agent-date.c sim-parser-append-plugins.c sim-parser-idm-event.c
-libparser_a_CFLAGS = $(LIBGDA_CFLAGS) $(GLIB_CFLAGS) $(GNET_CFLAGS) $(LIBBSON_CFLAGS)
+libparser_a_CFLAGS = $(LIBGDA_CFLAGS) $(GLIB_CFLAGS) $(GNET_CFLAGS) $(LIBBSON_CFLAGS) $(LIBMONGOC_CFLAGS)
 #
 
 ossim_server_CFLAGS = $(AM_CFLAGS)
@@ -67,8 +68,8 @@ ossim_server_SOURCES = \
 		sim-log.c \
 		sim-server.c \
 		sim-timetable.c \
-	  sim-text-fields.c \
-    sim-debug.c \
+		sim-text-fields.c \
+		sim-debug.c \
 		sim-groupalarm.c \
 		sim-context.c \
 		sim-engine.c \
@@ -80,10 +81,12 @@ ossim_server_SOURCES = \
 		sim-uuid.c	\
 		sim-ssl.c \
 		sim-server-api.c \
-	  sim-user-auth.c \
+		sim-user-auth.c \
+		stip-fileutils.c \
+		stip-mongo.c \
 		main.c
 
-ossim_server_LDADD = $(LIBGDA_LIBS) $(GNET_LIBS) $(GLIB_LIBS) $(GIO_LIBS) $(OPENSSL_LIBS) $(LIBUUID_LIBS) $(LIBPCRE_LIBS) $(LIBTIDY_LIBS) $(JSON_GLIB_LIBS) $(LIBGEOIP_LIBS) $(LIBSOUP_LIBS) $(LIBBSON_LIBS) $(LIBZLIB_LIBS) -lm libparser.a
+ossim_server_LDADD = $(LIBGDA_LIBS) $(GNET_LIBS) $(GLIB_LIBS) $(GIO_LIBS) $(OPENSSL_LIBS) $(LIBUUID_LIBS) $(LIBPCRE_LIBS) $(LIBTIDY_LIBS) $(JSON_GLIB_LIBS) $(LIBGEOIP_LIBS) $(LIBSOUP_LIBS) $(LIBBSON_LIBS) $(LIBMONGOC_LIBS) $(LIBZLIB_LIBS) -lm libparser.a
 
 SUBDIRS = tests
 

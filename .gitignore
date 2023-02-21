@@ -1,5 +1,14 @@
 *.o
 *.Po
+autom4te.cache/
+Makefile.in
+Makefile
+libparser.a
+ossim-server
+.deps/
+config.log
+config.status
+configure
 .vscode/
 alert-information.txt
 core
