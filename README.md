@@ -75,18 +75,33 @@ Verify the installation worked by running `mongo`.
 
 I suspect that MongoDB 5.0.x is the latest version we can get on Debian 9, even though the official documentation says otherwise (see references). I have tried to confirm this on the [MongoDB forums](https://www.mongodb.com/community/forums/t/installing-mongodb-6-x-on-debian-9-possible/215159).
 
-### References:
+#### References:
 1. https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-debian/ (claims MongoDB 6.0 is available on Debian 9)
 1. https://www.mongodb.com/try/download/community (does not allow downloading MongoDB 6.0 for Debian 9)
 1. https://www.mongodb.com/download-center/community/releases (Debian 9 is only listed under MongoDB versions <= 5.0)
 
 ### Installing the MongoDB C driver
-1. Surprisingly, installation of the C driver isn't straightforward either, I had to build it from source following the instructions linked below.
-    - Relevant links:
-        - https://stackoverflow.com/questions/51530526/cant-find-mongoc-h
-        - https://mongoc.org/libmongoc/current/installing.html
-    - Again, this is not the latest version of the driver, we may be interested in upgrading this later.
-1. You already installed `libbson` when building ossim from source, so no need to redo that.
+Surprisingly, installation of the C driver isn't straightforward either, I had to build it from source:
+```
+wget https://github.com/mongodb/mongo-c-driver/releases/download/1.23.2/mongo-c-driver-1.23.2.tar.gz
+tar xzf mongo-c-driver-1.23.2.tar.gz
+cd mongo-c-driver-1.23.2
+mkdir cmake-build
+cd cmake-build
+cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF ..
+cmake --build .
+sudo cmake --build . --target install
+make
+make install
+```
+
+If you get any undefined symbol/linking errors at runtime, you may need to run `ldconfig` to update the linker cache or add the path where the .so files were installed (`/usr/local/lib`) to your `LD_LIBRARY_PATH` environment variable. Additionally, it's also possible to add this path to the configuration files at `/etc/ld.so.conf.d/` if you don't want to export your environment variable every time. A last resort, which also works is to simply copy the new libbson .so files to `/usr/lib/x86_64-linux-gnu/` which seems to also work, although `ldconfig` may complain about the copied file not being a symlink.
+
+Also, full disclosure, I've repeated this procedure at least 10 times now, and each time I run into a new issue, so if you face any problems and it's not documented here, update this readme or tell me!
+
+#### References:
+- https://mongoc.org/libmongoc/current/installing.html
+- https://stackoverflow.com/questions/51530526/cant-find-mongoc-h
 
 ## Common issues
 This is the place to list common issues with fairly simple fixes.
