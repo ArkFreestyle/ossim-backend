@@ -63,14 +63,22 @@ Run `./autogen.sh` and it will generate a new Makefile which should allow compil
         - Example: `$(LIBMONGOC_LIBS)`
 
 ## Installing MongoDB
-1. `sudo apt-get install -y mongodb`
-    - The official website recommendeds the `mongodb-org` package (instead of `mongodb`), but I ran into issues trying to install that.
-        - Relevant link: https://stackoverflow.com/questions/28945921/e-unable-to-locate-package-mongodb-org
-    - `mongodb` is the unofficial mongodb package provided by Ubuntu and it is not maintained by MongoDB and conflicts with MongoDB’s officially supported packages.
-        - It's also not the latest version, but for now, my goal was to just install any version of mongoDB and see if we can get stip to insert alarms there.
-    - Possible future to do:
-        - Install the latest version (whatever is supported for Debian 9) of mongodb from source.
-            - Note, that this *may* require some modification/update to the mongoc-driver code.
+Run the following commands to install MongoDB 5.0.x. Note that these steps *do not* work for MongoDB version 6.0.x.
+```
+wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/5.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+sudo service mongodb start
+```
+Verify the installation worked by running `mongo`.
+
+I suspect that MongoDB 5.0.x is the latest version we can get on Debian 9, even though the official documentation says otherwise (see references). I have tried to confirm this on the [MongoDB forums](https://www.mongodb.com/community/forums/t/installing-mongodb-6-x-on-debian-9-possible/215159).
+
+### References:
+1. https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-debian/ (claims MongoDB 6.0 is available on Debian 9)
+1. https://www.mongodb.com/try/download/community (does not allow downloading MongoDB 6.0 for Debian 9)
+1. https://www.mongodb.com/download-center/community/releases (Debian 9 is only listed under MongoDB versions <= 5.0)
 
 ### Installing the MongoDB C driver
 1. Surprisingly, installation of the C driver isn't straightforward either, I had to build it from source following the instructions linked below.
