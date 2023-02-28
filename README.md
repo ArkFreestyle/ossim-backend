@@ -148,7 +148,7 @@ Function names are `<modulename>_<something>`
 
 Occasionally, I expect that we'll discover a bug contained in the original OSSIM code (not written by us). This section aims to outline our fixes for those bugs so that we can keep track of which files/functions we modified, and perhaps in the future merge them with more recent versions of the OSSIM codebase (as it gets released by AT&T). Before adding anything here, it is *very very* important to first trace and confirm that the issue is not from our additions. This can be tricky, but bear in mind, it'll make things 10x trickier for the next person if you get this wrong.
 
-### sim_directive.c: sim_directive_get_node_branch_by_level()
+### 1) sim-directive.c: sim_directive_get_node_branch_by_level()
 
 #### Behavior
 Inside the for loop which runs `up_level` times.<br>
@@ -161,3 +161,83 @@ In certain cases (it's not obvious exactly *when*), `up_level` can become a very
 My best guess is that the for loop should run `g_node_depth(node)` times instead of `up_level`. However, it looks like someone specifically added an `up_level` calculation. A `level` parameter also gets passed as an argument, so I'm not confident we can change that without being sure of what is meant to be done. The quick and easy fix is to check if `ret` is `NULL`, and if so, then break out of the for loop.
 
 Note that fixes like this are akin to fixing the symptom instead of addressing the root cause. But hey, it works, for now...
+
+### 2) sim-parser.c: const bson_mem_vtable_t vtable
+
+#### Behavior
+Installing/updating to libmongoc-1.23.2 also updates libbson (which is already being used in OSSIM). This ends up raising some warnings in sim-parser.c, at the declaration for `vtable`. Here's the exact warning that's raised:
+
+```
+make[1]: Entering directory '/root/stip-backend/os-sim/src'
+  CC       libparser_a-sim-parser.o
+sim-parser.c:71:1: error: braces around scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+ ^~~~~
+sim-parser.c:71:1: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:68: error: excess elements in scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+                                                                    ^
+sim-parser.c:71:68: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:70: error: excess elements in scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+                                                                      ^
+sim-parser.c:71:70: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:72: error: excess elements in scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+                                                                        ^
+sim-parser.c:71:72: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:1: error: missing initializer for field 'padding' of 'bson_mem_vtable_t {aka const struct _bson_mem_vtable_t}' [-Werror=missing-field-initializers]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+ ^~~~~
+In file included from /usr/local/include/libbson-1.0/bson/bson.h:40:0,
+                 from /usr/local/include/libbson-1.0/bson.h:18,
+                 from sim-parser.c:33:
+/usr/local/include/libbson-1.0/bson/bson-memory.h:40:10: note: 'padding' declared here
+    void *padding[3];
+          ^~~~~~~
+cc1: all warnings being treated as errors
+Makefile:682: recipe for target 'libparser_a-sim-parser.o' failed
+make[1]: *** [libparser_a-sim-parser.o] Error 1
+make[1]: Leaving directory '/root/stip-backend/os-sim/src'
+Makefile:1542: recipe for target 'all-recursive' failed
+make: *** [all-recursive] Error 1
+```
+Note that the build configuration for this project is using gcc's `Werror` flag, which means it's treating any warnings as errors, and will prevent your code from compiling. (You can change this in configure.ac, *only for testing purposes*, but it's much better to fix the warnings you see because the compiler usually has good reasons for generating them).
+
+#### Investigation
+The version of libbson used by OSSIM code has the following declaration for the `bson_mem_vtable_t` struct:
+```
+typedef struct _bson_mem_vtable_t {
+   void *(*malloc) (size_t num_bytes);
+   void *(*calloc) (size_t n_members, size_t num_bytes);
+   void *(*realloc) (void *mem, size_t num_bytes);
+   void (*free) (void *mem);
+   void *padding[4];
+} bson_mem_vtable_t;
+```
+This is called in sim-parser.c like so: `const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, {0,0,0,0}};`
+
+The version of libbson that gets installed when we install the latest version of libmongoc has the following declaration for `bson_mem_vtable_t`:
+```
+typedef struct _bson_mem_vtable_t {
+   void *(*malloc) (size_t num_bytes);
+   void *(*calloc) (size_t n_members, size_t num_bytes);
+   void *(*realloc) (void *mem, size_t num_bytes);
+   void (*free) (void *mem);
+   void *(*aligned_alloc) (size_t alignment, size_t num_bytes);
+   void *padding[3];
+} bson_mem_vtable_t;
+```
+This difference in declaration: the addition of a new struct member (aligned_alloc) and padding to have space for 3 elements instead of 4, is what raises our warning.
+
+#### Fix
+The warning can be avoided by simply declaring this variable in accordance with its new declaration.
+This means we change
+```
+const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, {0,0,0,0}};
+```
+to
+```
+const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, NULL, {0,0,0}};
+```
+According to the documentation, if `aligned_alloc` is undeclared, the `malloc` struct member is used in its place. This is fine, because OSSIM does not have a custom memory aligned allocation function anyway.

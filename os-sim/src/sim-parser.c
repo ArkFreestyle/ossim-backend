@@ -68,7 +68,7 @@ bson_calloc(size_t count, size_t size)
   return g_malloc (count * size);
 }
 #endif
-const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, NULL, {0,0,0}};
 
 static void
 sim_parser_class_init (SimParserClass *klass)
