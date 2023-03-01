@@ -63,22 +63,45 @@ Run `./autogen.sh` and it will generate a new Makefile which should allow compil
         - Example: `$(LIBMONGOC_LIBS)`
 
 ## Installing MongoDB
-1. `sudo apt-get install -y mongodb`
-    - The official website recommendeds the `mongodb-org` package (instead of `mongodb`), but I ran into issues trying to install that.
-        - Relevant link: https://stackoverflow.com/questions/28945921/e-unable-to-locate-package-mongodb-org
-    - `mongodb` is the unofficial mongodb package provided by Ubuntu and it is not maintained by MongoDB and conflicts with MongoDB’s officially supported packages.
-        - It's also not the latest version, but for now, my goal was to just install any version of mongoDB and see if we can get stip to insert alarms there.
-    - Possible future to do:
-        - Install the latest version (whatever is supported for Debian 9) of mongodb from source.
-            - Note, that this *may* require some modification/update to the mongoc-driver code.
+Run the following commands to install MongoDB 5.0.x. Note that these steps *do not* work for MongoDB version 6.0.x.
+```
+wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/5.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+sudo service mongodb start
+```
+Verify the installation worked by running `mongo`.
+
+I suspect that MongoDB 5.0.x is the latest version we can get on Debian 9, even though the official documentation says otherwise (see references). I have tried to confirm this on the [MongoDB forums](https://www.mongodb.com/community/forums/t/installing-mongodb-6-x-on-debian-9-possible/215159).
+
+#### References:
+1. https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-debian/ (claims MongoDB 6.0 is available on Debian 9)
+1. https://www.mongodb.com/try/download/community (does not allow downloading MongoDB 6.0 for Debian 9)
+1. https://www.mongodb.com/download-center/community/releases (Debian 9 is only listed under MongoDB versions <= 5.0)
 
 ### Installing the MongoDB C driver
-1. Surprisingly, installation of the C driver isn't straightforward either, I had to build it from source following the instructions linked below.
-    - Relevant links:
-        - https://stackoverflow.com/questions/51530526/cant-find-mongoc-h
-        - https://mongoc.org/libmongoc/current/installing.html
-    - Again, this is not the latest version of the driver, we may be interested in upgrading this later.
-1. You already installed `libbson` when building ossim from source, so no need to redo that.
+Surprisingly, installation of the C driver isn't straightforward either, I had to build it from source:
+```
+wget https://github.com/mongodb/mongo-c-driver/releases/download/1.23.2/mongo-c-driver-1.23.2.tar.gz
+tar xzf mongo-c-driver-1.23.2.tar.gz
+cd mongo-c-driver-1.23.2
+mkdir cmake-build
+cd cmake-build
+cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF ..
+cmake --build .
+sudo cmake --build . --target install
+make
+make install
+```
+
+If you get any undefined symbol/linking errors at runtime, you may need to run `ldconfig` to update the linker cache or add the path where the .so files were installed (`/usr/local/lib`) to your `LD_LIBRARY_PATH` environment variable. Additionally, it's also possible to add this path to the configuration files at `/etc/ld.so.conf.d/` if you don't want to export your environment variable every time. A last resort, which also works is to simply copy the new libbson .so files to `/usr/lib/x86_64-linux-gnu/` which seems to also work, although `ldconfig` may complain about the copied file not being a symlink.
+
+Also, full disclosure, I've repeated this procedure at least 10 times now, and each time I run into a new issue, so if you face any problems and it's not documented here, update this readme or tell me!
+
+#### References:
+- https://mongoc.org/libmongoc/current/installing.html
+- https://stackoverflow.com/questions/51530526/cant-find-mongoc-h
 
 ## Common issues
 This is the place to list common issues with fairly simple fixes.
@@ -140,7 +163,7 @@ Function names are `<modulename>_<something>`
 
 Occasionally, I expect that we'll discover a bug contained in the original OSSIM code (not written by us). This section aims to outline our fixes for those bugs so that we can keep track of which files/functions we modified, and perhaps in the future merge them with more recent versions of the OSSIM codebase (as it gets released by AT&T). Before adding anything here, it is *very very* important to first trace and confirm that the issue is not from our additions. This can be tricky, but bear in mind, it'll make things 10x trickier for the next person if you get this wrong.
 
-### sim_directive.c: sim_directive_get_node_branch_by_level()
+### 1) sim-directive.c: sim_directive_get_node_branch_by_level()
 
 #### Behavior
 Inside the for loop which runs `up_level` times.<br>
@@ -153,3 +176,83 @@ In certain cases (it's not obvious exactly *when*), `up_level` can become a very
 My best guess is that the for loop should run `g_node_depth(node)` times instead of `up_level`. However, it looks like someone specifically added an `up_level` calculation. A `level` parameter also gets passed as an argument, so I'm not confident we can change that without being sure of what is meant to be done. The quick and easy fix is to check if `ret` is `NULL`, and if so, then break out of the for loop.
 
 Note that fixes like this are akin to fixing the symptom instead of addressing the root cause. But hey, it works, for now...
+
+### 2) sim-parser.c: const bson_mem_vtable_t vtable
+
+#### Behavior
+Installing/updating to libmongoc-1.23.2 also updates libbson (which is already being used in OSSIM). This ends up raising some warnings in sim-parser.c, at the declaration for `vtable`. Here's the exact warning that's raised:
+
+```
+make[1]: Entering directory '/root/stip-backend/os-sim/src'
+  CC       libparser_a-sim-parser.o
+sim-parser.c:71:1: error: braces around scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+ ^~~~~
+sim-parser.c:71:1: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:68: error: excess elements in scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+                                                                    ^
+sim-parser.c:71:68: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:70: error: excess elements in scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+                                                                      ^
+sim-parser.c:71:70: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:72: error: excess elements in scalar initializer [-Werror]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+                                                                        ^
+sim-parser.c:71:72: note: (near initialization for 'vtable.aligned_alloc')
+sim-parser.c:71:1: error: missing initializer for field 'padding' of 'bson_mem_vtable_t {aka const struct _bson_mem_vtable_t}' [-Werror=missing-field-initializers]
+ const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free,{0,0,0,0}};
+ ^~~~~
+In file included from /usr/local/include/libbson-1.0/bson/bson.h:40:0,
+                 from /usr/local/include/libbson-1.0/bson.h:18,
+                 from sim-parser.c:33:
+/usr/local/include/libbson-1.0/bson/bson-memory.h:40:10: note: 'padding' declared here
+    void *padding[3];
+          ^~~~~~~
+cc1: all warnings being treated as errors
+Makefile:682: recipe for target 'libparser_a-sim-parser.o' failed
+make[1]: *** [libparser_a-sim-parser.o] Error 1
+make[1]: Leaving directory '/root/stip-backend/os-sim/src'
+Makefile:1542: recipe for target 'all-recursive' failed
+make: *** [all-recursive] Error 1
+```
+Note that the build configuration for this project is using gcc's `Werror` flag, which means it's treating any warnings as errors, and will prevent your code from compiling. (You can change this in configure.ac, *only for testing purposes*, but it's much better to fix the warnings you see because the compiler usually has good reasons for generating them).
+
+#### Investigation
+The version of libbson used by OSSIM code has the following declaration for the `bson_mem_vtable_t` struct:
+```
+typedef struct _bson_mem_vtable_t {
+   void *(*malloc) (size_t num_bytes);
+   void *(*calloc) (size_t n_members, size_t num_bytes);
+   void *(*realloc) (void *mem, size_t num_bytes);
+   void (*free) (void *mem);
+   void *padding[4];
+} bson_mem_vtable_t;
+```
+This is called in sim-parser.c like so: `const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, {0,0,0,0}};`
+
+The version of libbson that gets installed when we install the latest version of libmongoc has the following declaration for `bson_mem_vtable_t`:
+```
+typedef struct _bson_mem_vtable_t {
+   void *(*malloc) (size_t num_bytes);
+   void *(*calloc) (size_t n_members, size_t num_bytes);
+   void *(*realloc) (void *mem, size_t num_bytes);
+   void (*free) (void *mem);
+   void *(*aligned_alloc) (size_t alignment, size_t num_bytes);
+   void *padding[3];
+} bson_mem_vtable_t;
+```
+This difference in declaration: the addition of a new struct member (aligned_alloc) and padding to have space for 3 elements instead of 4, is what raises our warning.
+
+#### Fix
+The warning can be avoided by simply declaring this variable in accordance with its new declaration.
+This means we change
+```
+const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, {0,0,0,0}};
+```
+to
+```
+const bson_mem_vtable_t vtable = {malloc, calloc, realloc, free, NULL, {0,0,0}};
+```
+According to the documentation, if `aligned_alloc` is undeclared, the `malloc` struct member is used in its place. This is fine, because OSSIM does not have a custom memory aligned allocation function anyway.
