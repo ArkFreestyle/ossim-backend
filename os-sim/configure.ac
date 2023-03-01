@@ -112,7 +112,7 @@ PKG_CHECK_MODULES(JSON_GLIB, [json-glib-1.0 >= 0.10.2])
 PKG_CHECK_MODULES(LIBGEOIP, [libmaxminddb >= 1.2.0])
 PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4])
 PKG_CHECK_MODULES(LIBBSON, [libbson-1.0])
-PKG_CHECK_MODULES(LIBMONGOC, [libmongoc-static-1.0])
+PKG_CHECK_MODULES(LIBMONGOC, [libmongoc-1.0])
 PKG_CHECK_MODULES(LIBZLIB, zlib)
 AC_CHECK_HEADER([uuid/uuid.h],
 		AC_CHECK_LIB([uuid], [uuid_generate],
