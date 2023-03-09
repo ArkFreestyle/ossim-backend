@@ -159,6 +159,9 @@ Function names are `<modulename>_<something>`
 - For example: for a module named `sim-correlation`, you may notice its function names are `sim_correlation_<something>`
 - We will keep this convention within our STIP files, so for a module named `stip-mongo`, the function names should be `stip_mongo_<something>`
 
+### Basic Code Flow
+![CodeFlow.png](os-sim/doc/CodeFlow.png)
+
 ## Important changes to OSSIM files
 
 Occasionally, I expect that we'll discover a bug contained in the original OSSIM code (not written by us). This section aims to outline our fixes for those bugs so that we can keep track of which files/functions we modified, and perhaps in the future merge them with more recent versions of the OSSIM codebase (as it gets released by AT&T). Before adding anything here, it is *very very* important to first trace and confirm that the issue is not from our additions. This can be tricky, but bear in mind, it'll make things 10x trickier for the next person if you get this wrong.

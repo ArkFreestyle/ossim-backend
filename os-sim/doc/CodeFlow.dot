@@ -1,0 +1,193 @@
+digraph MessageArchitecture {
+    rankdir="TB"
+    //nodesep=4
+
+    node[ 
+        shape = rectangle
+        //style= "filled"
+        //color="lightgoldenrodyellow"
+    ];
+
+    while1 [label="while(TRUE)"];
+    while2 [label="while(TRUE)"];
+    while3 [label="while(TRUE)"];
+    while4 [label="while(TRUE)"];
+    while5 [label="while(TRUE)"];
+    
+    "main()"[shape=doublecircle, style=filled, color=palegreen1];
+    "exit()"[shape=doublecircle, style=filled, color=orangered];
+    "g_thread_new(sim_purge_backlogs_timeout)"[style=filled, color=orange];
+    "g_thread_new(sim_thread_server)"[style=filled, color=orange];
+    "g_thread_new(sim_thread_idm)"[style=filled, color=orange];
+    "g_thread_new(sim_server_session)"[style=filled, color=orange];
+    "g_thread_new(sim_thread_scheduler)"[style=filled, color=orange];
+    "g_thread_new(sim_thread_organizer)"[style=filled, color=orange];
+    
+    "g_thread_new(sim_organizer_thread_delete_backlogs)"[style=filled, color=orange];
+    "g_thread_new(sim_organizer_thread_monitor_rule)"[style=filled, color=orange];
+    "g_thread_new(sim_connect_send_alarm)"[style=filled, color=orange];
+    "g_thread_new(sim_server_thread_monitor_requests)"[style=filled, color=orange];
+
+    note1 [style="filled", color="lightgoldenrodyellow", shape=note, label="Note: This thread has a ton of comments about bugs and crashes.\n I'm unsure if they're just legacy comments \nor if they're still applicable..."]
+
+    // Main thread
+    subgraph clusterMainThread {
+      label = "Main Thread";
+      "main()" -> "sim_register_types()"
+      "sim_register_types()" -> "sim_options()"
+      "sim_options()" -> "sim_command_init_tls()"
+      "sim_command_init_tls()" -> "gnet_init()"
+      "gnet_init()" -> "gnet_ipv6_set_policy"
+      "gnet_ipv6_set_policy" ->
+      "gda_init()" ->
+      "sim_geoip_new()" ->
+      "sim_xml_config_new_from_file() OR sim_xml_config_get_config()" ->
+      "sim_log_init()" ->
+      "sim_pid_init()" ->
+      "sim_debug_init_signals()" ->
+      "sim_config_get_ds_by_name() OR sim_database_new()" ->
+      "sim_reputation_new()" ->
+      "g_thread_new(sim_purge_backlogs_timeout)" ->
+      "sim_directive_purge_db_backlogs()" ->
+      "sim_db_clean_siem_tables()" ->
+      "g_main_loop_new()" ->
+      "g_main_loop_get_context()" ->
+      "soup_server_new()" ->
+      "sim_user_auth_new()" ->
+      "soup_server_listen_local()" ->
+      "sim_config_load_server_ids()" ->
+      "sim_server_api_init()" ->
+      "sim_container_new()" ->
+      "sim_container_init()" ->
+      "sim_idm_context_init()" ->
+      "sim_scheduler_new()" ->
+      "sim_organizer_new()" -> "g_thread_new(sim_thread_server)"
+      "g_thread_new(sim_thread_server)" ->
+      "g_thread_new(sim_thread_idm)" ->
+      "g_thread_new(sim_thread_scheduler)" ->
+      "g_thread_new(sim_thread_organizer)" ->
+      "g_main_loop_run()" ->
+      "sim_server_api_stop()" ->
+      "soup_server_disconnect()" ->
+      "g_object_unref()" ->
+      "sim_idm_context_free()" ->
+      "sim_log_free()" ->
+      "exit()"
+    }
+
+    "if ossim.purging_backlogs"[shape=diamond, height=2]
+
+    // sim_purge_backlogs_timeout thread
+    subgraph clusterPurgeBacklogsTimeoutThread {
+      label = "Purge Backlogs Timeout Thread";
+    "g_thread_new(sim_purge_backlogs_timeout)" -> while1
+    while1 -> "if ossim.purging_backlogs"
+    "if ossim.purging_backlogs" -> "Log a message every 5 minutes"[label=TRUE]
+    "Log a message every 5 minutes" -> while1
+    }
+
+    // sim_thread_server thread
+    subgraph clusterThreadServer {
+      label = "Thread Server";
+      "g_thread_new(sim_thread_server)" -> "sim_server_listen_run(is_server=TRUE)"
+      "sim_server_listen_run(is_server=TRUE)" -> "sim_inet_* + gnet_tcp_* (initialization stuff)"
+      "sim_inet_* + gnet_tcp_* (initialization stuff)" -> "For each new gnet_tcp_socket connection"
+      "For each new gnet_tcp_socket connection" -> "g_thread_new(sim_server_session)"
+      "g_thread_new(sim_server_session)" -> "sim_session_new()"
+      "sim_session_new()" -> "sim_server_append_session()"
+      "sim_server_append_session()" -> "sim_session_read()"
+      "sim_session_read()" -> "sim_server_remove_session()"
+    }
+
+    // sim_thread_idm thread
+    subgraph clusterIDMThread {
+      label = "IDM Thread";
+      "g_thread_new(sim_thread_idm)" -> "sim_server_listen_run(is_server=FALSE)"
+      "sim_server_listen_run(is_server=FALSE)" -> "sim_inet_* + gnet_tcp_* (initialization stuff)"
+    }
+
+    // sim_thread_scheduler thread
+    subgraph clusterThreadScheduler {
+      label = "Thread Scheduler";
+      "g_thread_new(sim_thread_scheduler)" -> "sim_thread_scheduler_run()"
+      "sim_thread_scheduler_run()" -> "Periodically wake up and perform the following actions"
+      "Periodically wake up and perform the following actions" -> "sim_scheduler_task_remove_backlogs()"
+      "sim_scheduler_task_remove_backlogs()" -> "sim_scheduler_task_update_vuln_assets()"
+      "sim_scheduler_task_update_vuln_assets()" -> "sim_scheduler_task_insert_host_plugin_sids()"
+      "sim_scheduler_task_insert_host_plugin_sids()" -> "sim_scheduler_clean_group_alarm()"
+      "sim_scheduler_clean_group_alarm()" -> "sim_scheduler_show_stats()"
+      "sim_scheduler_show_stats()" -> "sim_scheduler_unconfigured_sensors"
+    }
+
+    // sim_thread_organizer thread
+    subgraph clusterOrganizerThread {
+      label = "Organizer Thread";
+      "g_thread_new(sim_thread_organizer)" -> "sim_organizer_run()"
+      "sim_organizer_run()" -> "sim_database_execute_no_query(update idm status)"
+      "sim_database_execute_no_query(update idm status)" -> while2
+      while2 -> "sim_container_pop_event()"
+      "sim_container_pop_event()" -> "sim_organizer_run_role()"
+      "sim_organizer_run_role()" -> "sim_context_inc_total_events()"
+      "sim_context_inc_total_events()" -> "sim_role_cross_correlate()"
+      "sim_role_cross_correlate()" -> "sim_organizer_correlation_plugin()"
+      "sim_organizer_correlation_plugin()" -> "sim_context_try_set_host_plugin_sid()"
+      "sim_context_try_set_host_plugin_sid()" -> "sim_role_qualify()"
+      "sim_role_qualify()" -> "sim_organizer_reprioritize()"
+      "sim_organizer_reprioritize()" -> "sim_organizer_risk_levels()"
+      "sim_organizer_risk_levels()" -> "sim_organizer_send_alarms_to_syslog()"
+      "sim_organizer_send_alarms_to_syslog()" -> "sim_role_correlate()"
+      "sim_role_correlate()" -> "sim_correlation()"
+      "sim_correlation()" -> "sim_role_store()"
+      "sim_role_store()" -> "sim_organizer_store_event()"
+      "sim_organizer_store_event()" -> "sim_policy_get_has_actions()"
+      "sim_policy_get_has_actions()" -> "sim_policy_get_has_alarm_actions"
+      "sim_policy_get_has_alarm_actions" -> "sim_container_push_ar_event()"
+      "sim_container_push_ar_event()" -> "sim_container_increase_total_events()"
+      "sim_container_increase_total_events()" -> "sim_event_unref()"
+      "sim_event_unref()" -> while2
+    }
+
+    // sim_organizer_thread_delete_backlogs thread
+    subgraph clusterOrganizerThreadDeleteBacklogs {
+      label = "Organizer Thread Delete Backlogs";
+      "sim_organizer_run()" -> "g_thread_new(sim_organizer_thread_delete_backlogs)"
+      "g_thread_new(sim_organizer_thread_delete_backlogs)" -> while3
+      while3 -> "sim_container_pop_delete_backlog_from_db()"
+      "sim_container_pop_delete_backlog_from_db()" -> "sim_uuid_new_from_uuid()"
+      "sim_uuid_new_from_uuid()" -> "sim_directive_delete_database_backlog()"
+      "sim_directive_delete_database_backlog()" -> while3
+    }
+
+    // sim_organizer_thread_monitor_rule thread
+    subgraph clusterThreadMonitor {
+      label = "Thread Monitor Rule";
+      "sim_organizer_run()" -> "g_thread_new(sim_organizer_thread_monitor_rule)"
+      "g_thread_new(sim_organizer_thread_monitor_rule)" -> while4
+      while4 -> "sim_container_pop_monitor_rule()"
+      "sim_container_pop_monitor_rule()" -> "sim_rule_get_plugin_ids()"
+      "sim_rule_get_plugin_ids()" -> "sim_server_push_session_plugin_command()"
+      "sim_server_push_session_plugin_command()" -> while4
+      "sim_server_push_session_plugin_command()" -> "g_thread_new(sim_server_thread_monitor_requests)"
+    }
+
+    // sim_server_thread_monitor_requests
+    subgraph clusterThreadMonitorRequests {
+      label = "Thread Monitor Requests";
+      "g_thread_new(sim_server_thread_monitor_requests)" -> "sim_session_write()"
+    }
+    
+
+    // sim_connect_send_alarm thread
+    subgraph clusterConnectSendAlarmThread {
+      label = "Connect Send Alarm Thread";
+      "sim_organizer_run()" -> "g_thread_new(sim_connect_send_alarm)"
+      note1 -> "g_thread_new(sim_connect_send_alarm)"
+      "g_thread_new(sim_connect_send_alarm)" -> while5
+      while5 -> "sim_container_pop_ar_event()"
+      "sim_container_pop_ar_event()" -> "prepare variables to send"
+      "prepare variables to send" -> "get variables to send"
+      "get variables to send" -> "g_io_channel_write_chars()"
+      "g_io_channel_write_chars()" -> while5
+    }
+  }
+  
