@@ -1,4 +1,4 @@
-digraph MessageArchitecture {
+digraph OssimCodeFlow {
     rankdir="TB"
     //nodesep=4
 
@@ -88,11 +88,16 @@ digraph MessageArchitecture {
 
     // sim_thread_server thread
     subgraph clusterThreadServer {
-      label = "Thread Server";
+      label = "Server Thread";
       "g_thread_new(sim_thread_server)" -> "sim_server_listen_run(is_server=TRUE)"
       "sim_server_listen_run(is_server=TRUE)" -> "sim_inet_* + gnet_tcp_* (initialization stuff)"
       "sim_inet_* + gnet_tcp_* (initialization stuff)" -> "For each new gnet_tcp_socket connection"
       "For each new gnet_tcp_socket connection" -> "g_thread_new(sim_server_session)"
+    }
+
+    // sim_server_session
+    subgraph clusterServerSessionThread {
+      label = "Server Session Thread\n(There will be one of these for each session)";
       "g_thread_new(sim_server_session)" -> "sim_session_new()"
       "sim_session_new()" -> "sim_server_append_session()"
       "sim_server_append_session()" -> "sim_session_read()"
@@ -108,7 +113,7 @@ digraph MessageArchitecture {
 
     // sim_thread_scheduler thread
     subgraph clusterThreadScheduler {
-      label = "Thread Scheduler";
+      label = "Scheduler Thread";
       "g_thread_new(sim_thread_scheduler)" -> "sim_thread_scheduler_run()"
       "sim_thread_scheduler_run()" -> "Periodically wake up and perform the following actions"
       "Periodically wake up and perform the following actions" -> "sim_scheduler_task_remove_backlogs()"
@@ -117,6 +122,7 @@ digraph MessageArchitecture {
       "sim_scheduler_task_insert_host_plugin_sids()" -> "sim_scheduler_clean_group_alarm()"
       "sim_scheduler_clean_group_alarm()" -> "sim_scheduler_show_stats()"
       "sim_scheduler_show_stats()" -> "sim_scheduler_unconfigured_sensors"
+      "sim_scheduler_unconfigured_sensors" -> "Periodically wake up and perform the following actions"
     }
 
     // sim_thread_organizer thread
@@ -160,7 +166,7 @@ digraph MessageArchitecture {
 
     // sim_organizer_thread_monitor_rule thread
     subgraph clusterThreadMonitor {
-      label = "Thread Monitor Rule";
+      label = "Rule Monitoring Thread";
       "sim_organizer_run()" -> "g_thread_new(sim_organizer_thread_monitor_rule)"
       "g_thread_new(sim_organizer_thread_monitor_rule)" -> while4
       while4 -> "sim_container_pop_monitor_rule()"
@@ -172,7 +178,7 @@ digraph MessageArchitecture {
 
     // sim_server_thread_monitor_requests
     subgraph clusterThreadMonitorRequests {
-      label = "Thread Monitor Requests";
+      label = "Requests Monitoring Thread";
       "g_thread_new(sim_server_thread_monitor_requests)" -> "sim_session_write()"
     }
     
@@ -190,4 +196,3 @@ digraph MessageArchitecture {
       "g_io_channel_write_chars()" -> while5
     }
   }
-  
