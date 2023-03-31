@@ -38,14 +38,15 @@ digraph OssimCodeFlow {
       "sim_options()" -> "sim_command_init_tls()"
       "sim_command_init_tls()" -> "gnet_init()"
       "gnet_init()" -> "gnet_ipv6_set_policy"
-      "gnet_ipv6_set_policy" ->
-      "gda_init()" ->
-      "sim_geoip_new()" ->
-      "sim_xml_config_new_from_file() OR sim_xml_config_get_config()" ->
-      "sim_log_init()" ->
-      "sim_pid_init()" ->
-      "sim_debug_init_signals()" ->
-      "sim_config_get_ds_by_name() OR sim_database_new()" ->
+      "gnet_ipv6_set_policy" -> "gda_init()"
+      "gda_init()" -> "sim_geoip_new()"
+      "sim_geoip_new()" -> "sim_xml_config_new_from_file() OR sim_xml_config_get_config()"
+      "sim_xml_config_new_from_file() OR sim_xml_config_get_config()" -> "sim_log_init()"
+      "sim_log_init()" -> "sim_pid_init()"
+      "sim_pid_init()" -> "sim_debug_init_signals()"
+      "sim_debug_init_signals()" -> "sim_config_get_ds_by_name()"
+      "sim_config_get_ds_by_name()" -> "sim_database_new()"
+      "sim_database_new()" -> "sim_reputation_new()"
       "sim_reputation_new()" ->
       "g_thread_new(sim_purge_backlogs_timeout)" ->
       "sim_directive_purge_db_backlogs()" ->
