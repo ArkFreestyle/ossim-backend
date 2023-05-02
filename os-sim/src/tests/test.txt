@@ -15,3 +15,20 @@
 	8 - Parar el servidor.
 	9 - Consultar la base de datos para los resultados.
 	
+- We need to test the server correlation automatically.
+- A database, which must start clean in each test.
+- Set of classes that is capable of analyzing the expected results in the fundamental tables.
+- correlation rules that test all possible combinations of policies
+- Here we will put the basic parameters of the server. From it we will generate a config.xml that will be what we will pass at startup.
+- The testing process:
+1 - Create the test database.
+2 - Load the corresponding data.
+3 - Put the basics for the server to start.
+4 - Generate the config.xml file
+5 - Generate the directives file that you want to test.
+6 - Start the server. Main problem, we are not able to know in
+What state is it in? You have to wait for the boot.
+7 - Generate the corresponding events.
+8 - Stop the server.
+9 - Consult the database for the results.
+
